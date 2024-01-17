@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import 'reflect-metadata';
 import { AppDataSource } from './ormconfig';
 import { tasksRouter } from './src/tasks/tasks.router';
+import cors from 'cors';
 
 dotenv.config({ path: './.env.development' });
 
@@ -23,5 +24,7 @@ AppDataSource.initialize()
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
+
+app.use(cors());
 
 app.use('/', tasksRouter);
