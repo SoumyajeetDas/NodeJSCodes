@@ -40,7 +40,7 @@ __decorate([
 ], Task.prototype, "date", void 0);
 __decorate([
     (0, typeorm_1.Column)({
-        type: 'longtext',
+        type: 'varchar',
         length: 255,
         nullable: true,
     }),
@@ -48,7 +48,7 @@ __decorate([
 ], Task.prototype, "description", void 0);
 __decorate([
     (0, typeorm_1.Column)({
-        type: 'enum',
+        type: 'simple-enum',
         enum: Priority_1.Priority,
         default: Priority_1.Priority.LOW,
     }),
@@ -56,7 +56,7 @@ __decorate([
 ], Task.prototype, "priority", void 0);
 __decorate([
     (0, typeorm_1.Column)({
-        type: 'enum',
+        type: 'simple-enum',
         enum: Status_1.Status,
         default: Status_1.Status.TODO,
     }),
