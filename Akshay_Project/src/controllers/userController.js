@@ -1,6 +1,7 @@
 const User = require('../models/user');
 const mongoose = require('mongoose');
-const { Mongoose } = require('mongoose'); // Assuming you have a User model defined
+const jwt = require('jsonwebtoken');
+
 
 exports.signup = async (req, res) => {
   try {
@@ -56,6 +57,10 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: 'Invalid email or password' });
     }
 
+    const token = await jwt.sign({ _id: user._id }, 'DEVTINDER_SECRET');
+
+    res.cookie('token', token);
+
     res.status(200).json({ message: 'Login successful' });
   } catch (error) {
     return res.status(500).json({ message: 'Internal Server Error', error });
@@ -104,6 +109,20 @@ exports.users = async (req, res) => {
   } catch (error) {
     console.error('Error fetching users:', error);
     res.status(500).json({ message: error });
+  }
+};
+
+exports.profile = async (req, res) => {
+  try {
+    const user = req.user;
+
+    if (!user) {
+      return res.status(400).json({ message: 'User not found' });
+    }
+    return res.status(200).json({ message: 'User found', user });
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    return res.status(500).json({ message: 'Internal server error', error });
   }
 };
 
