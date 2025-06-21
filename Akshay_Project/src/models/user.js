@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Email ID is required'],
     unique: true,
+    trim: true,
     validate: {
       validator: function(val) {
         let validRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
@@ -41,6 +42,20 @@ const userSchema = new mongoose.Schema({
       message: '{VALUE} is not supported',
     },
   },
+  photoUrl: {
+    type: String,
+    default: 'https://t4.ftcdn.net/jpg/02/44/43/69/360_F_244436923_vkMe10KKKiw5bjhZeRDT05moxWcPpdmb.jpg',
+  },
+  about: {
+    type: String,
+    default: 'This default about section will be updated soon.',
+    maxlength: [500, 'About section cannot exceed 500 characters'],
+  },
+  skills: {
+    type: [String],
+  },
+}, {
+  timestamps: true,
 });
 
 // Pre-save hook to hash the password before saving -- Document Middleware
@@ -54,6 +69,12 @@ userSchema.pre('save', async function(next) {
 
   next();
 });
+
+// Instance method to compare passwords
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  // Compare the candidate password with the hashed password
+  return await bcrypt.compare(candidatePassword, this.password);
+};
 
 // If the model already exists, use it; otherwise, create a new one
 let userModel = (mongoose.models.User) || (mongoose.model('User', userSchema));
