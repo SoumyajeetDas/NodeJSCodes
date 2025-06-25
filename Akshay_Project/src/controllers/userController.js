@@ -1,182 +1,97 @@
-const User = require('../models/user');
-const mongoose = require('mongoose');
-const jwt = require('jsonwebtoken');
-
-
-exports.signup = async (req, res) => {
-  try {
-    // Extract user data from request body
-    // const {firstName, lastName, emailId, password, age, gender } = req.body;
-
-    const newUser = await User.create(req.body);
-
-    // Remove password from the response for security reasons
-    newUser.password = '';
-
-    // Same thing could have been done using save()
-    // const userData = {
-    //   firstName: newUser.firstName,
-    //   lastName: newUser.lastName,
-    //   emailId: newUser.emailId,
-    //   password: newUser.password,
-    //   age: newUser.age,
-    //   gender: newUser.gender,
-    // }
-    // const userData = await newUser.save();
-
-    // Respond with the created user data
-    res.status(201).json({ message: 'User created successfully', user: newUser });
-  } catch (error) {
-    if (error?.name === 'ValidationError') {
-      // Handle validation errors
-      const errorMessages = Object.values(error.errors).map(err => err.message);
-      return res.status(400).json({ message: 'Validation error', errors: errorMessages });
-    }
-    console.error('Error during signup:', error);
-    res.status(500).json({ message: error });
-  }
-};
-
-exports.login = async (req, res) => {
-  const { emailId, password } = req.body;
+const ConnectionRequest = require('../models/connectionRequest');
+exports.requestsReceived = async (req, res) => {
+  const user = req.user;
 
   try {
 
-    // As in the User Model we kept password as selec: false, so by default it won't be returned in queries
-    // +password is used to include the password field in the query result.
-    const user = await User.findOne({ emailId }).select('+password');
+    const requests = await ConnectionRequest.find({
+      toUserId: user._id,
+      status: 'interested',
+    })
+      .populate({
+        path: 'fromUserId',
+        select: ['firstName', 'lastName', 'emailId', 'profilePicture'], // Select only the fields you need
+      });
+    // .populate({
+    //   path: 'fromUserId',
+    //   select: 'firstName lastName emailId', // Select only the fields you need
+    // });
+    // .populate('fromUserId', 'firstName  lastName emailId'); // Populate fromUserId with name, email, and profilePicture
+    //.populate('fromUserId', ['firstName', 'lastName', 'emailId']); // Populate fromUserId with name, email, and profilePicture
 
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid email or password' });
+    if (!requests || requests.length === 0) {
+      return res.status(200).json({ message: 'No connection requests found', requests });
     }
 
-    // Compare the provided password with the stored hashed password
-    const isPasswordValid = await user.comparePassword(password);
-
-    if (!isPasswordValid) {
-      return res.status(400).json({ message: 'Invalid email or password' });
-    }
-
-    const token = await jwt.sign({ _id: user._id }, 'DEVTINDER_SECRET');
-
-    res.cookie('token', token);
-
-    res.status(200).json({ message: 'Login successful' });
-  } catch (error) {
-    return res.status(500).json({ message: 'Internal Server Error', error });
-  }
-
-};
-
-exports.user = async (req, res) => {
-  const { emailId } = req.body;
-
-  try {
-    const user = await User.findOne({ emailId });
-
-    if (!user) {
-      return res.status(400).json({ message: 'User not found' });
-    }
-
-    // Remove password from the response for security reasons
-    user.password = '';
-
-    res.status(200).json({ message: 'User found', user });
-
-  } catch (error) {
-    console.error('Error fetching user:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-exports.users = async (req, res) => {
-  try {
-    const users = await User.find({});
-
-    // It's all the same
-    // const users = await User.find({});
-
-    if (!users || users?.length === 0) {
-      return res.status(400).json({ message: 'No users found' });
-    }
-
-    // Remove passwords from the response for security reasons
-    users?.forEach(user => {
-      user.password = '';
+    return res.status(200).json({
+      message: 'Connection requests found',
+      requests,
     });
-
-    res.status(200).json({ message: 'Users fetched successfully', users });
   } catch (error) {
-    console.error('Error fetching users:', error);
-    res.status(500).json({ message: error });
-  }
-};
-
-exports.profile = async (req, res) => {
-  try {
-    const user = req.user;
-
-    if (!user) {
-      return res.status(400).json({ message: 'User not found' });
-    }
-    return res.status(200).json({ message: 'User found', user });
-  } catch (error) {
-    console.error('Error fetching user profile:', error);
+    console.error('Error fetching connection requests:', error);
     return res.status(500).json({ message: 'Internal server error', error });
   }
+
 };
 
-exports.userDelete = async (req, res) => {
-  const { id } = req.params;
+exports.connections = async (req, res) => {
+  const user = req.user;
 
   try {
-    const user = await User.findByIdAndDelete(new mongoose.Types.ObjectId(id));
+    //////// 1st Way//////////
+    // const connections = await ConnectionRequest.find({
+    //   $or: [{
+    //     $and: [
+    //       { fromUserId: user._id },
+    //       { status: 'accepted' },
+    //     ],
+    //
+    //   }, {
+    //     $and: [
+    //       { toUserId: user._id },
+    //       { status: 'accepted' },
+    //     ],
+    //   }],
+    // });
 
-    if (!user) {
-      return res.status(400).json({ message: 'User not found' });
-    }
 
-    res.status(200).json({ message: 'User deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: error });
-  }
-};
+    //////// 2nd Way//////////
+    const connections = await ConnectionRequest.find({
+      $or: [
+        {
+          fromUserId: user._id,
+          status: 'accepted',
+        },
+        {
+          toUserId: user._id,
+          status: 'accepted',
+        },
+      ],
+    })
+      .populate('fromUserId', ['firstName', 'lastName', 'emailId']); // Populate fromUserId with name, email, and profilePicture
 
-exports.updateUser = async (req, res) => {
-  const { id } = req.params;
-  const updateData = req.body;
 
-  try {
-    const user = await User.findByIdAndUpdate({ _id: new mongoose.Types.ObjectId(id) }, updateData, {
-      new: true,
-      // runValidators: true,
+    // Suppose User1 logs in, then we will figure out the connections where User1 has sent request to User2(present in fromUserId user who logged in
+    // his/her ObjectId will be present) and User2 has accepted the request  or User2 has sent request to
+    // User1 (present in toUserId user who logged in his/her ObjectId will be present) and User1 has accepted
+    // the request
+    const connectionsWithToUser = connections.map(connection => {
+      if (connection.fromUserId.toString() === user._id.toString()) {
+        return connection.toUserId;
+      }
+      return connection.fromUserId;
     });
 
-    // const user = await User.findByIdAndUpdate(new mongoose.Types.ObjectId(id), updateData, {
-    //   new: true,
-    //   runValidators: true,
-    // });
-
-    // const user = await User.findByIdAndUpdate(new mongoose.Types.ObjectId(id), { $set: updateData }, {
-    //   new: true,
-    //   runValidators: true,
-    // });
-
-    if (!user) {
-      return res.status(400).json({ message: 'User not found' });
+    if (!connectionsWithToUser || connectionsWithToUser.length === 0) {
+      return res.status(200).json({ message: 'No connections found', connections: [] });
     }
 
-    // Remove password from the response for security reasons
-    user.password = undefined;
-
-    res.status(200).json({ message: 'User updated successfully', user });
+    return res.status(200).json({
+      message: 'Connections found',
+      connections: connectionsWithToUser,
+    });
   } catch (error) {
-    if (error?.name === 'ValidationError') {
-      // Handle validation errors
-      const errorMessages = Object.values(error.errors).map(err => err.message);
-      return res.status(400).json({ message: 'Validation error', errors: errorMessages });
-    }
-
-    res.status(500).json({ message: error });
+    console.error('Error fetching connections:', error);
+    return res.status(500).json({ message: 'Internal server error', error });
   }
 };

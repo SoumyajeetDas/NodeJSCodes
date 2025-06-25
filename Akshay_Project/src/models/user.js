@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const userSchema = new mongoose.Schema({
   firstName: {
@@ -74,6 +75,14 @@ userSchema.pre('save', async function(next) {
 userSchema.methods.comparePassword = async function(candidatePassword) {
   // Compare the candidate password with the hashed password
   return await bcrypt.compare(candidatePassword, this.password);
+};
+
+userSchema.methods.getJWT = async function() {
+  const token = await jwt.sign({ _id: this._id }, 'DEVTINDER_SECRET', {
+    expiresIn: '1d',
+  });
+
+  return token;
 };
 
 // If the model already exists, use it; otherwise, create a new one
