@@ -5,6 +5,8 @@ const requestRouter = require('./routes/requestRouter');
 const userRouter = require('./routes/userRouter'); // Assuming you have a userRouter
 const cookieParser = require('cookie-parser');
 
+require('dotenv').config();
+
 
 const app = express();
 

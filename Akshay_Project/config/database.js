@@ -10,7 +10,7 @@ const dbConnect = async () => {
 
   // Connect to database
   const db = await mongoose.connect(
-    'mongodb://0.0.0.0:27017' + '/devtinder' || '',
+    process.env.MONGO_URI + '/devtinder' || '',
   );
 
   // 0 = disconnected
